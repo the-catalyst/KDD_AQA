@@ -75,7 +75,6 @@ def main(params):
             # Only create a new one if you are not loading a model
             accelerator.print("Creating new training order")
             embs = torch.rand(trn_ques['input_ids'].shape[0], 64).to(params.device)
-            # embs = torch.from_numpy(np.load(params.model_dir + '/doc_embs.npy')) #.to(DEVICE)
             cluster_mat = cluster_dense_embs(embs, device=params.device, tree_depth=int(math.log(trn_ques['input_ids'].shape[0]/params.batch_size, 2)))
             embs = embs.detach().cpu().numpy()
             del embs
@@ -94,24 +93,25 @@ def main(params):
     train_dl = DataLoader(dataset = train_dataset, num_workers=4, collate_fn=train_dataset.collate_fn, pin_memory=True, 
                                 batch_sampler=BatchSampler(MySampler(train_dataset, train_order_fname), train_bs_fname, False))
 
-    test_ds, ques_ds = DocDataset(val_ques), DocDataset(trn_ques)
-    # abs_ds = DocDataset(trn_abs) if params.task == "pretrain" else DocDataset(val_abs)
-    abs_ds = DocDataset(val_abs)
+    
+    ques_ds, abs_ds = DocDataset(trn_ques), DocDataset(trn_abs)
+    test_ds, test_abs_ds = DocDataset(val_ques), DocDataset(val_abs)
 
     test_dl = DataLoader(dataset = test_ds, batch_size=1024, shuffle=False, 
                                 num_workers=4, collate_fn=test_ds.collate_fn, pin_memory=True)
+    
+    test_abs_dl = DataLoader(dataset = test_abs_ds, batch_size=1024, shuffle=False, 
+                                num_workers=4, collate_fn=test_ds.collate_fn, pin_memory=True)
 
-    abs_bs = 1024
-    abs_ds = DataLoader(dataset = abs_ds, batch_size=abs_bs, shuffle=False, 
+    abs_ds = DataLoader(dataset = abs_ds, batch_size=1024, shuffle=False, 
                                 num_workers=4, collate_fn=abs_ds.collate_fn, pin_memory=True)
     
-    ques_bs = 8192 if params.task == "pretrain" else 1024
-    ques_dl = DataLoader(dataset = ques_ds, batch_size=ques_bs, shuffle=False, 
+    ques_dl = DataLoader(dataset = ques_ds, shuffle=False, batch_size = 8192 if params.task == "pretrain" else 1024,
                                 num_workers=4, collate_fn=ques_ds.collate_fn, pin_memory=True)
 
     model = DualEncoder(params)
 
-    runner = Runner([train_dl, test_dl, abs_ds, ques_dl], accelerator, [train_order, train_bs, cluster_mat], params)
+    runner = Runner([train_dl, test_dl, test_abs_dl, ques_dl, abs_ds], accelerator, [train_order, train_bs, cluster_mat], params)
     runner.train(model, params) 
 
 
