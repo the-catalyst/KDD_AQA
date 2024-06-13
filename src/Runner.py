@@ -18,8 +18,9 @@ class Runner:
     def __init__(self, dataloaders, accelerator, query_clustering, params, top_k=20):
         self.train_dl = dataloaders[0]
         self.test_dl = dataloaders[1]
-        self.abs_dl = dataloaders[2]
-        self.trn_ques_dl = dataloaders[3]
+        self.test_abs_dl = dataloaders[2]
+        self.ques_dl = dataloaders[3]
+        self.abs_dl = dataloaders[4]
         self.accelerator = accelerator
         self.num_train, self.num_test = len(self.train_dl.dataset), len(self.test_dl.dataset)
         self.top_k = top_k
@@ -60,7 +61,7 @@ class Runner:
             self.accelerator.wait_for_everyone()
         
         if doc_embs == None:
-            doc_embs = model.get_dataset_embeddings(self.trn_ques_dl, tqdm_disable = not self.accelerator.is_main_process)
+            doc_embs = model.get_dataset_embeddings(self.ques_dl, tqdm_disable = not self.accelerator.is_main_process)
         
         if self.accelerator.is_main_process:
             all_preds = model.anns.search(doc_embs.float(), k = self.shortlist_size) 
@@ -82,7 +83,7 @@ class Runner:
                 if embs is None:
                     self.accelerator.print(f'Started creating updated query text embeddings at {time.ctime()}')
                     torch.cuda.empty_cache()
-                    cluster_dl = self.trn_ques_dl if self.task == "train" else self.abs_dl
+                    cluster_dl = self.ques_dl if self.task == "train" else self.abs_dl
                     embs = model.get_dataset_embeddings(cluster_dl, tqdm_disable = not self.accelerator.is_main_process)
                     self.accelerator.print(f'Query embeddings created at {time.ctime()}')
                 
@@ -255,7 +256,7 @@ class Runner:
 
         self.optimizer = self.accelerator.prepare(self.optimizer)
 
-        self.test_dl, self.trn_ques_dl, self.abs_dl = self.accelerator.prepare(self.test_dl, self.trn_ques_dl, self.abs_dl)
+        self.test_dl, self.ques_dl, self.abs_dl = self.accelerator.prepare(self.test_dl, self.ques_dl, self.abs_dl)
 
         if len(params.load_model) and not params.load_from_pt:
             init = self.initialize_model(model, params)
@@ -304,7 +305,7 @@ class Runner:
         test_enc_embs = model.get_dataset_embeddings(self.test_dl, tqdm_disable = not self.accelerator.is_main_process)
         
         ##Get Encoder Label Embeddings
-        lbl_enc_embs = model.get_dataset_embeddings(self.abs_dl, tqdm_disable = not self.accelerator.is_main_process)
+        lbl_enc_embs = model.get_dataset_embeddings(self.test_abs_dl, tqdm_disable = not self.accelerator.is_main_process)
 
         if self.accelerator.is_main_process:
             model.anns.build_index(lbl_enc_embs)
@@ -313,7 +314,7 @@ class Runner:
             with torch.no_grad():
                 candidates, probs = model.anns.search(test_enc_embs.float(), k=20)   
                 candidates = candidates.detach().cpu()
-                
+                    
             preds = self.id_to_pid_map[candidates]
             preds = '\n'.join(','.join(pred) for pred in preds)
             with open(f"{self.model_dir}/pred_file.txt", "w") as fil:

@@ -116,6 +116,7 @@ def main(args):
     print(f"Tokenizing Valid Paper Abstract with max length {max_train_len}...")
     valid_abstract = [x.strip() for x in open(f'{data_dir}/papers.raw.txt', "r", encoding="utf-8").readlines()]
     tokenize_dump(valid_abstract, f"{data_dir}/valid/", tokenizer, max_train_len, "abstract", args.num_threads)
+    del valid_abstract
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
