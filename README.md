@@ -8,7 +8,8 @@ Welcome to the AQA (Academic Question Answering) project. This project aims to d
 
 ## Table of Contents
 1. [Setup](#setup)
-2. [Training Instructions](#training-instructions)
+2. [Data Preprocessing](#data-preprocessing)
+3. [Training Instructions](#training-instructions)
    - [Stage 1 Training](#stage-1-training)
    - [Stage 2 Training](#stage-2-training)
 
@@ -21,6 +22,38 @@ conda env create -n kdd_aqa --file=environment.yml
 ```
 
 This will create a conda environment named kdd_aqa using the dependencies listed in the environment.yml file.
+
+# Data Preprocessing
+
+Before training the model, you need to preprocess the data. The preprocessing steps include cleaning the data and preparing it for training. All data files are inside the `./data` directory.
+
+### Data Cleaning (`src/preprocessing.ipynb`)
+1. Clean Data:
+
+- Load and clean the training and validation data using BeautifulSoup to remove HTML tags and regular expressions to clean text.
+
+- Store the cleaned questions, body text, and paper IDs for both training and validation sets.
+
+2. Process Paper Data:
+
+- Load the paper data and clean the titles and abstracts.
+
+- Create mappings between paper IDs and their corresponding cleaned text.
+
+3. Save Processed Data:
+
+- Save the cleaned and processed data into appropriate files for later use in training and validation.
+
+### Tokenization (`src/create_tokenized_data.py`)
+1. Tokenize Data:
+
+- Use the transformers library to tokenize the cleaned text data.
+
+- Tokenize training questions and bodies, validation questions and bodies, and pretraining paper titles and abstracts.
+
+2. Save Tokenized Data:
+
+- Save the tokenized data into NumPy arrays for efficient loading during the training process.
 
 # Training Instructions
 
