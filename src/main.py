@@ -32,7 +32,7 @@ def load_data(args):
     val_abs['attention_mask'] = torch.from_numpy(np.load(os.path.join(args.data_path, 'valid', 'abstract_attention_mask.npy')))
 
     if params.task == "train":
-        XY = sp.load_npz(f"{args.data_path}/train_full_Q_A.npz")
+        XY = sp.load_npz(f"{args.data_path}/train_Q_A.npz")
     elif params.task == "pretrain":
         len_X = trn_ques['input_ids'].shape[0]
         data, rows, cols = [1]*len_X, np.arange(len_X), np.arange(len_X)
